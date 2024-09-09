@@ -1,0 +1,112 @@
+name: Deploy build to Google play
+description: Deploys a build to a Google Play track using fastlane
+inputs:
+    dry-run:
+      type: boolean
+      required: false
+      default: false
+      description: When enabled, workflow will not execute the fastlane command to deploy a build, but print it instead
+    package-name:
+      description: The unique package name for the android app, e.g. uk.co.guardian.feast
+      required: true
+      type: string  
+    artifact-name:
+      description: Name of the build artifacts (set when calling actions/upload-artifact in the build automation)
+      required: true
+      type: string
+    track:
+      description: Play store track to deploy to (e.g. production, internal)
+      required: true
+      default: internal
+      type: string
+    rollout:
+      description: Percentage rollout [0 - 1]
+      required: true
+      default: '1.00'
+      type: string
+    gitref:
+      description: Branch or tag to deploy
+      required: false
+      type: string
+    sha:
+      description: Commit hash to deploy (optional)
+      required: false
+      type: string
+    github-token:
+     required: true
+     type: string
+    console-credentials:
+     required: true
+     type: string
+outputs:
+  aab:
+    description: "The filename of the aab that was deployed"
+    value: ${{ steps.summary.outputs.aab }}
+  sha:
+    description: "The aab was build from this commit SHA"
+    value: ${{ steps.summary.outputs.sha}}
+runs:
+  using: "composite"
+  steps:
+    - name: "job: ${{ inputs.track }} release from ${{ inputs.gitref }}${{ inputs.sha }} to ${{ inputs.rollout }} of users"
+      shell: bash
+      run: |
+        echo "TRACK=${{ inputs.track }}" >> $GITHUB_ENV
+        echo "PACKAGE_NAME=${{ inputs.package-name }}" >> $GITHUB_ENV
+        echo "ARTIFACT_NAME=${{ inputs.artifact-name }}" >> $GITHUB_ENV
+        echo "ROLLOUT=${{ inputs.rollout }}" >> $GITHUB_ENV
+        echo "GITREF=${{ inputs.gitref }}" >> $GITHUB_ENV
+        echo "SHA=${{ inputs.sha }}" >> $GITHUB_ENV
+        # if inputs.dry-run is true, then we set env.DRY_RUN to echo, otherwise we set it to empty string
+        echo "DRY_RUN=${{ inputs.dry-run == 'true' && 'echo' || '' }}" >> $GITHUB_ENV
+
+    - name: Determinate target sha if not given to action
+      shell: bash
+      if: env.SHA == ''
+      run: |
+        test -f .git/refs/heads/${{ env.GITREF }} || git fetch --no-tags origin ${{ env.GITREF }}:${{ env.GITREF }}
+        SHA=$(git rev-parse ${{ env.GITREF }})
+        echo "SHA=$SHA" >> $GITHUB_ENV
+
+    - name: Download apk ${{ env.ARTIFACT_NAME }} from target build ${{ env.SHA }}
+      # Note: we use the commit hash to specify the version since this is not an official and trusted action
+      uses: dawidd6/action-download-artifact@bf251b5aa9c2f7eeb574a96ee720e24f801b7c11 #@v6
+      with:
+        github_token: ${{ inputs.github-token }}
+        workflow: build.yml
+        workflow_conclusion: success
+        commit: ${{ env.SHA }}
+        name: ${{ env.ARTIFACT_NAME }}
+
+    - name: Publish summary and outputs
+      id: summary
+      shell: bash
+      run: |
+        echo "## Deployment for Track: ${{ env.TRACK}}" >> $GITHUB_STEP_SUMMARY
+        echo "**Rollout**: ${{ env.ROLLOUT }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch/tag**: [${{ env.GITREF }}](https://github.com/${{ github.repository }}/tree/${{ env.GITREF }})" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit hash**: [${{ env.SHA }}](https://github.com/${{ github.repository }}/commit/${{ env.SHA }})" >> $GITHUB_STEP_SUMMARY
+        echo "**aab**: $(ls *.aab)" >> $GITHUB_STEP_SUMMARY
+        echo "aab=$(ls *.aab)" >> $GITHUB_OUTPUT
+        echo "sha=${{ env.SHA }}" >> $GITHUB_OUTPUT
+
+    - name: Release ${{ env.ARTIFACT_NAME }} build to ${{ env.ROLLOUT }} of ${{ env.TRACK}} track from ${{ env.GITREF }}@${{ env.SHA }}
+      shell: bash
+      run: |
+        ${DRY_RUN} fastlane supply \
+          --package_name ${{ env.PACKAGE_NAME }} \
+          --track ${{ env.TRACK}} \
+          --aab_path *.aab \
+          --skip_upload_apk \
+          --rollout ${{ env.ROLLOUT }}
+      env:
+        SUPPLY_JSON_KEY_DATA: ${{ inputs.console-credentials }}
+        SUPPLY_UPLOAD_MAX_RETRIES: 1
+
+      # If filename is v0.1.0-feast-release.apk, cut will split the filename into 3 fields using - as the delimiter:
+      # "v0.1.0", "feast" and "release.apk". We can use the first field as the tag.
+    - name: Create git tag
+      shell: bash
+      run: | 
+        TAG=$(ls *.aab | cut -d'-' -f1)
+        ${DRY_RUN} git push origin ${{ env.SHA }}:refs/tags/$TAG
