@@ -41,7 +41,7 @@ inputs:
     version-codes-to-retain:
       required: false
       type: string
-      default: '[]'
+      default: ''
 outputs:
   aab:
     description: "The filename of the aab that was deployed"
@@ -64,6 +64,7 @@ runs:
         # if inputs.dry-run is true, then we set env.DRY_RUN to echo, otherwise we set it to empty string
         echo "DRY_RUN=${{ inputs.dry-run == 'true' && 'echo' || '' }}" >> $GITHUB_ENV
         echo "VERSION_CODES_TO_RETAIN=${{ inputs.version-codes-to-retain }}" >> $GITHUB_ENV
+        echo "VERSION_CODES_TO_RETAIN_PARAM='--version_codes_to_retain ${{ inputs.version-codes-to-retain }}'" >> $GITHUB_ENV
 
     - name: Determinate target sha if not given to action
       shell: bash
@@ -104,8 +105,8 @@ runs:
           --track ${{ env.TRACK}} \
           --aab_path *.aab \
           --skip_upload_apk \
-          --version_codes_to_retain ${{ env.VERSION_CODES_TO_RETAIN }} \
-          --rollout ${{ env.ROLLOUT }}
+          --rollout ${{ env.ROLLOUT }} \
+          ${{ env.VERSION_CODES_TO_RETAIN != '' && '--version_codes_to_retain ' env.VERSION_CODES_TO_RETAIN || ''}}
       env:
         SUPPLY_JSON_KEY_DATA: ${{ inputs.console-credentials }}
         SUPPLY_UPLOAD_MAX_RETRIES: 1
