@@ -38,7 +38,7 @@ inputs:
     console-credentials:
       required: true
       type: string
-    version_codes_to_retain:
+    version-codes-to-retain:
       required: false
       type: string
       default: '[]'
@@ -63,7 +63,7 @@ runs:
         echo "SHA=${{ inputs.sha }}" >> $GITHUB_ENV
         # if inputs.dry-run is true, then we set env.DRY_RUN to echo, otherwise we set it to empty string
         echo "DRY_RUN=${{ inputs.dry-run == 'true' && 'echo' || '' }}" >> $GITHUB_ENV
-        echo "VERSION_CODES_TO_RETAIN=${{ inputs.version_codes_to_retain }}" >> $GITHUB_ENV
+        echo "VERSION_CODES_TO_RETAIN=${{ inputs.version-codes-to-retain }}" >> $GITHUB_ENV
 
     - name: Determinate target sha if not given to action
       shell: bash
