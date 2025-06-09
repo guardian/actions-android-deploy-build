@@ -64,7 +64,12 @@ runs:
         # if inputs.dry-run is true, then we set env.DRY_RUN to echo, otherwise we set it to empty string
         echo "DRY_RUN=${{ inputs.dry-run == 'true' && 'echo' || '' }}" >> $GITHUB_ENV
         echo "VERSION_CODES_TO_RETAIN=${{ inputs.version-codes-to-retain }}" >> $GITHUB_ENV
-        echo "VERSION_CODES_TO_RETAIN_PARAM=${{ inputs.version-codes-to-retain == '' && '' || '--version_codes_to_retain $VERSION_CODES_TO_RETAIN' }}
+
+    - name: "Set version_codes_to_retain param"
+      shell: bash
+      if: ${{ inputs.version-codes-to-retain != '' }}
+      run: |
+          echo "VERSION_CODES_TO_RETAIN_PARAM='--version_codes_to_retain ${{ inputs.version-codes-to-retain }}'" >> $GITHUB_ENV
 
     - name: Determinate target sha if not given to action
       shell: bash
