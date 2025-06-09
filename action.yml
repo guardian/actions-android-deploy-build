@@ -33,11 +33,11 @@ inputs:
       required: false
       type: string
     github-token:
-     required: true
-     type: string
+      required: true
+      type: string
     console-credentials:
-     required: true
-     type: string
+      required: true
+      type: string
     version_codes_to_retain:
       required: false
       type: string
@@ -104,7 +104,7 @@ runs:
           --track ${{ env.TRACK}} \
           --aab_path *.aab \
           --skip_upload_apk \
-          --version_codes_to_retain ${{ env.VERSION_CODES_TO_RETAIN }}
+          --version_codes_to_retain ${{ env.VERSION_CODES_TO_RETAIN }} \
           --rollout ${{ env.ROLLOUT }}
       env:
         SUPPLY_JSON_KEY_DATA: ${{ inputs.console-credentials }}
