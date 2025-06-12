@@ -39,7 +39,7 @@ To be successfully used in a workflow, this actions requires the client to
 | `sha` | A git SHA (e.g. `main`) identifying your target build. This input is optional, but one of either `gitref` or `sha` must be passed to this action. If both are given, then `sha` takes precedence over `gitref` | `string`, **optional** |
 | `github-token` | Token used to authenticate git operations, such as `fetch` and `tag`. Usually passsing `${{ secrets.GITHUB_TOKEN }}` is the desired setup | `string`, **required** |
 | `console-credentials` | The JSON credentials for the service account to use in deployment | `string`, **required** |
-| `version-codes-to-retain` | Version codes already uploaded to retain in this release. Used for supporting older Android versions. Comma seperated list of version code integers | `string`, **optional**, default: (empty string) |
+| `version-codes-to-retain` | Version codes already uploaded to retain in this release. Used for supporting older Android versions. Comma separated list of version code integers | `string`, **optional**, default: (empty string) |
 
 ### Outputs
 
