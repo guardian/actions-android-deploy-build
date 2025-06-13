@@ -33,11 +33,15 @@ inputs:
       required: false
       type: string
     github-token:
-     required: true
-     type: string
+      required: true
+      type: string
     console-credentials:
-     required: true
-     type: string
+      required: true
+      type: string
+    version-codes-to-retain:
+      required: false
+      type: string
+      default: ''
 outputs:
   aab:
     description: "The filename of the aab that was deployed"
@@ -59,6 +63,7 @@ runs:
         echo "SHA=${{ inputs.sha }}" >> $GITHUB_ENV
         # if inputs.dry-run is true, then we set env.DRY_RUN to echo, otherwise we set it to empty string
         echo "DRY_RUN=${{ inputs.dry-run == 'true' && 'echo' || '' }}" >> $GITHUB_ENV
+        echo "VERSION_CODES_TO_RETAIN=${{ inputs.version-codes-to-retain }}" >> $GITHUB_ENV
 
     - name: Determinate target sha if not given to action
       shell: bash
@@ -89,6 +94,7 @@ runs:
         echo "**aab**: $(ls *.aab)" >> $GITHUB_STEP_SUMMARY
         echo "aab=$(ls *.aab)" >> $GITHUB_OUTPUT
         echo "sha=${{ env.SHA }}" >> $GITHUB_OUTPUT
+        echo "version_codes_to_retain=${{ env.VERSION_CODES_TO_RETAIN }}" >> $GITHUB_OUTPUT
 
     - name: Release ${{ env.ARTIFACT_NAME }} build to ${{ env.ROLLOUT }} of ${{ env.TRACK}} track from ${{ env.GITREF }}@${{ env.SHA }}
       shell: bash
@@ -98,7 +104,8 @@ runs:
           --track ${{ env.TRACK}} \
           --aab_path *.aab \
           --skip_upload_apk \
-          --rollout ${{ env.ROLLOUT }}
+          --rollout ${{ env.ROLLOUT }} \
+          ${VERSION_CODES_TO_RETAIN:+--version_codes_to_retain $VERSION_CODES_TO_RETAIN}
       env:
         SUPPLY_JSON_KEY_DATA: ${{ inputs.console-credentials }}
         SUPPLY_UPLOAD_MAX_RETRIES: 1
